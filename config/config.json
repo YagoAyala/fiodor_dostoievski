@@ -1,0 +1,26 @@
+{
+  "development": {
+    "username": "dostoievski",
+    "password": "dostoievski",
+    "database": "dostoievskidb",
+    "host": "localhost",
+    "dialect": "postgres",
+    "port": 5432
+  },
+  "test": {
+    "username": "dostoievski",
+    "password": "dostoievski",
+    "database": "dostoievskidb_test",
+    "host": "localhost",
+    "dialect": "postgres",
+    "port": 5432
+  },
+  "production": {
+    "username": "dostoievski",
+    "password": "dostoievski",
+    "database": "dostoievskidb_prod",
+    "host": "localhost",
+    "dialect": "postgres",
+    "port": 5432
+  }
+}

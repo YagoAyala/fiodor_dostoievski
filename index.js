@@ -3,6 +3,7 @@ const cron = require('node-cron');
 const { TwitterApi } = require('twitter-api-v2');
 const express = require('express');
 const { OpenAI } = require('openai');
+const { Message } = require('./models');
 
 const app = express();
 const port = 3000;
@@ -24,7 +25,7 @@ const getTodayDate = () => {
     return `${day}/${month}/${year}`;
 }
 
-async function generateTweet() {
+const generateTweet = async () => {
     try {
         const todayDate = getTodayDate();
         const response = await client.responses.create({
@@ -39,10 +40,21 @@ async function generateTweet() {
     }
 }
 
+const registerOnDatabase = async (tweetContent) => {
+    return Message.create({
+        message: tweetContent,
+        type: 'twitter',
+        created_at: new Date(),
+        updated_at: new Date(),
+    });
+}
+
 async function postTweet() {
     try {
         const tweetContent = await generateTweet();
         await twitterClient.v2.tweet(tweetContent);
+        await registerOnDatabase(tweetContent);
+
         return 'Tweet posted successfully!';
     } catch (error) {
         console.log(error);
