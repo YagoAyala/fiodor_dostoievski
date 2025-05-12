@@ -66,7 +66,7 @@ app.get('/', (req, res) => {
     res.send('Server is running!');
 });
 
-cron.schedule('*/2 * * * *', async () => {
+cron.schedule('0 6 * * *', async () => {
     await postTweet();
 }, {
     timezone: "America/Sao_Paulo"
