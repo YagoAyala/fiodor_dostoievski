@@ -54,14 +54,9 @@ app.get('/', (req, res) => {
     res.send('Server is running!');
 });
 
-app.get('/tweet', express.json(), async (req, res) => {
-    const result = await postTweet();
-    res.send({ result });
-});
 
-cron.schedule('0 6 * * *', async () => {
-    const tweetContent = await generateTweet();
-    await postTweet(tweetContent);
+cron.schedule('*/5 * * * *', async () => {
+    await postTweet();
 }, {
     timezone: "America/Sao_Paulo"
 });
