@@ -4,6 +4,7 @@ const { TwitterApi } = require('twitter-api-v2');
 const express = require('express');
 const { OpenAI } = require('openai');
 const { Message } = require('./models');
+const { where, fn, col, Op } = require('sequelize');
 
 const app = express();
 const port = 3000;
@@ -25,12 +26,12 @@ const getTodayDate = () => {
     return `${day}/${month}/${year}`;
 }
 
-const generateTweet = async () => {
+const generateTweet = async (personalizedInput) => {
     try {
         const todayDate = getTodayDate();
         const response = await client.responses.create({
-            model: "gpt-3.5-turbo",
-            input: `Forneça uma frase famosa de um filósofo, no formato: \"Frase do filósofo\" - nome do filósofo. Escolha um filósofo adequado para o dia de hoje (${todayDate}).`
+            model: "gpt-4o-mini",
+            input: `Forneça uma frase famosa de um filósofo, no formato: \"Frase do filósofo\" - nome do filósofo. Ela deve combinar com o espírito de hoje (${todayDate}) e com ${personalizedInput}, despertando emoção e reflexão.`
         });
 
         const phrase = response.output_text.trim() ?? 'Nãooo, deu erro na hora de gerar a mensagem :(';
@@ -42,22 +43,51 @@ const generateTweet = async () => {
 
 const registerOnDatabase = async (tweetContent) => {
     return Message.create({
-        message: tweetContent,
+        message: tweetContent.toLowerCase(),
         type: 'twitter',
         created_at: new Date(),
         updated_at: new Date(),
     });
 }
 
-async function postTweet() {
+const checkIfContentWasAlreadyTweeted = async (tweetContent) => {
+    const normalised = tweetContent.toLowerCase();
+
+    const row = await Message.findOne({
+        where: {
+            type: 'twitter',
+            [Op.and]: where(fn('lower', col('message')), normalised),
+        },
+    });
+
+    return row;
+}
+
+const handleCoreLogic = async (personalizedInput = '', maxAttemps = 10) => {
+    if(maxAttemps < 0) {
+        throw new Error('A lógica não está eficiente!');
+    }
+
+    const tweetContent = await generateTweet(personalizedInput);
+    const tweetIsAlreadyTweeted = await checkIfContentWasAlreadyTweeted(tweetContent);
+
+    if (tweetIsAlreadyTweeted) {
+        const subtractedAttemp = maxAttemps - 1;
+        const newRule = personalizedInput ? `${personalizedInput}, ${tweetContent}` : `Não usar a (s) frase (s) ${tweetContent}`;
+
+        return handleCoreLogic(newRule, subtractedAttemp)
+    }
+
+    await twitterClient.v2.tweet(tweetContent);
+    await registerOnDatabase(tweetContent);
+}
+
+const postTweet = async () => {
     try {
-        const tweetContent = await generateTweet();
-        await twitterClient.v2.tweet(tweetContent);
-        await registerOnDatabase(tweetContent);
+        await handleCoreLogic();
 
         return 'Tweet posted successfully!';
     } catch (error) {
-        console.log(error);
         return 'Error posting tweet.';
     }
 }
